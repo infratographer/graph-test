@@ -1,0 +1,29 @@
+name: Apollo Schema Check
+
+# Generally running a pull_request_target with secrets from the fork is risky, however we are only using the schema.graphql
+# file and not executing any code from the branch so it's safe here.
+on:
+  pull_request_target:
+    branches:
+      - main
+    types: [opened, reopened, synchronize]
+
+jobs:
+  check_schema:
+    name: check schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+      - name: Customer API check
+        uses: iansu/apollo-schema-check-action@v2
+        with:
+          title: IPAM API Schema Check
+          graph: infratographer
+          variant: main
+          localSchemaFile: 'schema.graphql'
+          serviceName: ipam-api
+          validationPeriod: P2W
+          key: ${{ secrets.APOLLO_KEY }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
