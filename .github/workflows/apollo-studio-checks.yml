@@ -7,23 +7,31 @@ on:
     branches:
       - main
     types: [opened, reopened, synchronize]
+# .github/workflows/check.yml
 
 jobs:
-  check_schema:
-    name: check schema
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+
+    env:
+      APOLLO_KEY: ${{ secrets.APOLLO_KEY }}
+      APOLLO_VCS_COMMIT: ${{ github.event.pull_request.head.sha }}
+      APOLLO_VCS_REMOTE_URL: ${{ github.event.pull_request.head.repo.clone_url }}
+      APOLLO_VCS_BRANCH: ${{ github.event.pull_request.head.label }}
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - uses: actions/checkout@v2
-      - name: Customer API check
-        uses: iansu/apollo-schema-check-action@v2
+      - uses: actions/checkout@v3
         with:
-          title: IPAM API Schema Check
-          graph: infratographer
-          variant: main
-          localSchemaFile: 'schema.graphql'
-          serviceName: ipam-api
-          validationPeriod: P2W
-          key: ${{ secrets.APOLLO_KEY }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install Rover
+        run: |
+          curl -sSL https://rover.apollo.dev/nix/latest | sh
+          echo "$HOME/.rover/bin" >> $GITHUB_PATH
+      # only run this command with the `--background` flag if you have the Apollo Studio GitHub integration enabled on your repository
+      - name: Run check against infratographer supergraph
+        run: |
+          rover subgraph check --name ipam-api --schema schema.graphql infratographer@main --background
